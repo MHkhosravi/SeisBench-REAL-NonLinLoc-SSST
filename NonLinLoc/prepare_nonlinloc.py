@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prepare NonLinLoc inputs from LOC-FLOW/REAL outputs."""
+"""Prepare NonLinLoc inputs from SeisBench-REAL-NonLinLoc-SSST/REAL outputs."""
 
 from __future__ import annotations
 
@@ -349,7 +349,7 @@ def write_control_file(args: argparse.Namespace, trans_lat: float, trans_lon: fl
     delay_include = f"INCLUDE {args.delay_include}\n" if args.delay_include else ""
 
     text = f"""# =============================================================================
-# NonLinLoc control file generated from LOC-FLOW REAL association output
+# NonLinLoc control file generated from REAL association output
 # =============================================================================
 CONTROL 1 54321
 
@@ -375,7 +375,7 @@ GT_PLFD 1.0e-3 0
 # =============================================================================
 # NLLoc input
 # =============================================================================
-LOCSIG LOC-FLOW NonLinLoc
+LOCSIG SeisBench-REAL-NonLinLoc-SSST NonLinLoc
 LOCCOM REAL phase association relocation
 LOCFILES {Path(args.phase_output).as_posix()} NLLOC_OBS time/layer loc/{args.project_name} 0
 LOCHYPOUT SAVE_NLLOC_ALL SAVE_NLLOC_SUM NLL_FORMAT_VER_2
@@ -400,7 +400,7 @@ def write_ssst_control_file(args: argparse.Namespace, trans_lat: float, trans_lo
     ensure_parent(control_file)
 
     text = f"""# =============================================================================
-# Loc2ssst control file generated from LOC-FLOW REAL association output
+# Loc2ssst control file generated from REAL association output
 # =============================================================================
 CONTROL 1 54321
 

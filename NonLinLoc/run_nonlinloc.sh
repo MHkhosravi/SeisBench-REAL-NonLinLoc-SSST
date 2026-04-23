@@ -37,7 +37,6 @@ latref="auto"
 lonref="auto"
 
 # Shift velocity depths upward by this value in km, e.g. 0.94515 for the
-# Petronas datum used in the previous notebook examples.
 datum_shift=0.0
 top_depth=-2.0
 

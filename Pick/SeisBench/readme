@@ -1,4 +1,4 @@
-SeisBench picker for LOC-FLOW
+SeisBench picker for SeisBench-REAL-NonLinLoc-SSST
 
 This directory contains `runseisbench.py`, a SeisBench wrapper that writes
 REAL-compatible pick files directly.
@@ -28,10 +28,8 @@ Model and weight syntax:
 
     PhaseNet_original
     PhaseNet:original
-    PhaseNet:stead
-    EQTransformer:stead
-    EQTransformer:stead@EQT_Ranked25_WOGrCl_Aug_0.3_2
-
+    GPD:original
+    EQTransformer:original_nonconservative
 The output folder label is normally `<Model>_<Weight>`. Use `@label` to set a
 custom folder name.
 
@@ -44,13 +42,10 @@ CPU and GPU examples:
 Multiple models can be run together. Each model/weight pair gets its own pick
 folder:
 
-    python3 runseisbench.py --models PhaseNet_original,PhaseNet_stead,EQTransformer_stead --device auto
-
-For OBS-style three-component files such as `DHZ`, `DH1`, and `DH2`, use exact
-channels and a file template:
+    python3 runseisbench.py --models PhaseNet_original,GPD_original,EQTransformer_original_nonconservative --device auto
 
     python3 runseisbench.py \
-      --data-dir /path/to/waveform_sac_withInstrument_Response_500HZ \
+      --data-dir /path/to/waveform_sac \
       --station-file /path/to/station_list_3Cs.json \
       --file-template "{date}/{station}/5B.{station}.{channel}" \
       --channels DHZ,DH1,DH2 \
@@ -60,10 +55,6 @@ channels and a file template:
       --model-sampling-rate 500 \
       --device auto
 
-CSV results are disabled by default because the REAL-ready pick files are
-written directly. Enable CSV output only when needed:
-
-    python3 runseisbench.py --models PhaseNet_original --save-csv
 
 To associate SeisBench picks with REAL:
 

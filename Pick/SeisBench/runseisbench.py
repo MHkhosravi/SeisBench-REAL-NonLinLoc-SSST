@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Run SeisBench phase pickers and write LOC-FLOW/REAL-compatible pick files.
+Run SeisBench phase pickers and write SeisBench-REAL-NonLinLoc-SSST/REAL-compatible pick files.
 
 Default inputs follow the standard LOC-FLOW layout:
     Data/waveform_sac/YYYYMMDD/NET.STA.CHANNEL
@@ -110,7 +110,7 @@ _WORKER_DEVICE: Optional[str] = None
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Run SeisBench pickers and write LOC-FLOW REAL pick files."
+        description="Run SeisBench pickers and write REAL pick files."
     )
     parser.add_argument(
         "--data-dir",
@@ -961,7 +961,7 @@ def main() -> int:
 
     tasks = [(station, date_label) for date_label in dates for station in stations]
 
-    print("SeisBench LOC-FLOW picker")
+    print("SeisBench picker")
     print(f"  station file: {station_file}")
     print(f"  waveform dir: {config.data_dir}")
     print(f"  dates:        {', '.join(dates)}")

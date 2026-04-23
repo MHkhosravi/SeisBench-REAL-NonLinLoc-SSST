@@ -7,11 +7,6 @@ Earthquake processing workflow for:
 3. NonLinLoc location
 4. NonLinLoc/SSST relocation
 
-This repository is a focused LOC-FLOW-derived workflow. The standalone
-PhaseNet, EQTransformer/OBSTransformer, STA/LTA, HypoInverse, hypoDD,
-GrowClust, Match&Locate, magnitude, and plotting modules from the broader
-LOC-FLOW distribution are intentionally not included.
-
 ## Associated Paper
 
 This repository contains the code used for the study:
@@ -25,14 +20,17 @@ Northern Montney, British Columbia, Canada."
 The data used in this study, including the event catalog and continuous
 waveform data, cannot be shared due to confidentiality and data-sharing
 restrictions imposed by the operator and project partners. The code used for
-this study is publicly available at:
-https://github.com/MHkhosravi/SeisBench-REAL-NonLinLoc-SSST
+this study is publicly available at this repo.
+
+## Licensing Note
+
+This repository combines workflow scripts built around LOC-FLOW, SeisBench,
+and NonLinLoc. Please refer to the respective upstream projects for their
+licenses and terms of use.
 
 ## Workflow
 
-![Workflow overview](docs/figures/workflow.png)
-
-Source figure: [docs/figures/workflow.pdf](docs/figures/workflow.pdf)
+<img src="docs/figures/workflow.png" alt="Workflow overview" width="260">
 
 ## Layout
 
