@@ -22,7 +22,7 @@ then
     echo "  cmake --build ../src/NonLinLoc/src/build --target Vel2Grid Grid2Time NLLoc -j"
 fi
 
-phasein="../REAL/phase_allday.txt"
+phasein="../REAL/*.phase_sel.txt"
 stationin="../Data/station.dat"
 velocityin="../REAL/tt_db/mymodel.nd"
 
@@ -42,9 +42,11 @@ top_depth=-2.0
 
 # Default grids are conservative starting points. Tighten/refine for final runs.
 # Grid2Time's Podvin-Lecomte solver requires cubic cells, so keep dx=dy=dz.
+# The GRID2D radial extent is 150 km so stations outside the search grid still
+# have valid travel times to the far corners of the default location grid.
 # The -2 km top keeps all current stations inside the grid after elevation is
 # applied as a positive-up offset.
-vggrid="2 101 65 0.0 0.0 -2.0 1.0 1.0 1.0 SLOW_LEN"
+vggrid="2 151 65 0.0 0.0 -2.0 1.0 1.0 1.0 SLOW_LEN"
 locgrid="101 101 33 -50.0 -50.0 -2.0 1.0 1.0 1.0 PROB_DENSITY SAVE"
 locsearch="OCT 40 40 8 0.01 50000 5000 0 1"
 locmeth="EDT_OT_WT 9999.0 4 -1 -1 -1.0 -1 -1 1"
@@ -52,8 +54,12 @@ locgau="0.5 0.0"
 locgau2="0.02 0.05 2.0"
 
 # Pick-time uncertainties in seconds for the NLLOC_OBS GAU records.
+# In residual mode, p_error and s_error are minimum floors and sigma_cap is
+# the maximum bounded uncertainty from abs(REAL phase_sel residual).
+error_mode="residual"
 p_error=0.02
 s_error=0.04
+sigma_cap=0.50
 
 # Optional station delay file with LOCDELAY statements.
 delay_include=""
@@ -85,8 +91,10 @@ python3 prepare_nonlinloc.py \
     --station-prefix "$station_prefix" \
     --datum-shift "$datum_shift" \
     --top-depth "$top_depth" \
+    --error-mode "$error_mode" \
     --p-error "$p_error" \
     --s-error "$s_error" \
+    --sigma-cap "$sigma_cap" \
     --vggrid "$vggrid" \
     --locgrid "$locgrid" \
     --locsearch "$locsearch" \

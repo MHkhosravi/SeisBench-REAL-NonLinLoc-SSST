@@ -11,9 +11,12 @@ Earthquake processing workflow for:
 
 This repository contains the code used for the study:
 
-Khosravi et al., "Machine Learning-Based Automatic Microseismic Event
-Detection During the 17 August 2015 M_w 4.6 Induced Earthquake Sequence in
-Northern Montney, British Columbia, Canada."
+Khosravi, M. H., Korolev, A., Ding, L., de Boer, T., Yang, G.,
+Kravchinsky, E., Lui, S. K. Y., Grasselli, G., & Liu, Q. (2026). Machine
+Learning-Based Automatic Microseismic Event Detection During the 17 August
+2015 Mw 4.6 Induced Earthquake Sequence in Northern Montney, British Columbia,
+Canada. *Bulletin of the Seismological Society of America*.
+https://doi.org/10.1785/0120250263
 
 ## Data And Code Availability
 
@@ -120,7 +123,7 @@ bash run_ssst_relocations.sh
 ```
 
 Before final runs, edit the study-specific grid, reference coordinates,
-velocity model, datum shift, pick errors, and minimum phase counts in the
+velocity model, datum shift, pick-error mode, and minimum phase counts in the
 NonLinLoc scripts.
 
 ## External Software
@@ -142,9 +145,25 @@ fetching and staging REAL and NonLinLoc binaries.
 ## Credits
 
 This focused workflow builds on LOC-FLOW and related tools. Please cite the
-original packages you use in your work:
+original packages and methods you use in your work:
 
-- LOC-FLOW: Zhang et al., 2022, doi: 10.1785/0220220019
-- REAL: Zhang, Ellsworth, and Beroza, 2019, doi: 10.1785/0220190052
-- NonLinLoc: Lomax et al., 2000, doi: 10.1007/978-94-015-9536-0_5
-- SeisBench: Woollam et al., 2022, doi: 10.1785/0220210324
+- LOC-FLOW: Zhang, M., Liu, M., Feng, T., Wang, R., & Zhu, W. (2022).
+  LOC-FLOW: An end-to-end machine learning-based high-precision earthquake
+  location workflow. *Seismological Research Letters*, 93(5), 2426-2438.
+  https://doi.org/10.1785/0220220019
+  [Dal-mzhang/LOC-FLOW](https://github.com/Dal-mzhang/LOC-FLOW)
+- REAL: Zhang, M., Ellsworth, W. L., & Beroza, G. C. (2019). Rapid earthquake
+  association and location. *Seismological Research Letters*, 90(6), 2276-2284.
+  https://doi.org/10.1785/0220190052
+  [Dal-mzhang/REAL](https://github.com/Dal-mzhang/REAL)
+- NonLinLoc: Lomax, A., Virieux, J., Volant, P., & Berge-Thierry, C. (2000).
+  Probabilistic earthquake location in 3D and layered models: Introduction of
+  a Metropolis-Gibbs method and comparison with linear locations. In *Advances
+  in Seismic Event Location* (pp. 101-134). Dordrecht: Springer Netherlands.
+  https://doi.org/10.1007/978-94-015-9536-0_5
+  [ut-beg-texnet/NonLinLoc](https://github.com/ut-beg-texnet/NonLinLoc)
+- SSST: Lomax, A., & Savvaidis, A. (2022). High-precision earthquake location
+  using source-specific station terms and inter-event waveform similarity.
+  *Journal of Geophysical Research: Solid Earth*, 127(1), e2021JB023190.
+  https://doi.org/10.1029/2021JB023190
+  [ut-beg-texnet/NonLinLoc](https://github.com/ut-beg-texnet/NonLinLoc)

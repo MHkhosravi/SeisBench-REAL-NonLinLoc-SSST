@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import glob
 import math
 import shutil
 from dataclasses import dataclass, field
@@ -12,6 +13,7 @@ from pathlib import Path
 
 
 PHASE_ERRORS = {"P": 0.02, "S": 0.04}
+DEFAULT_SIGMA_CAP = 0.50
 
 
 @dataclass
@@ -20,6 +22,7 @@ class Pick:
     phase: str
     arrival: datetime
     probability: str = "1.000"
+    residual: float | None = None
 
 
 @dataclass
@@ -33,7 +36,14 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Create NonLinLoc station, phase, velocity, and control files."
     )
-    parser.add_argument("--phase-file", default="../REAL/phase_allday.txt")
+    parser.add_argument(
+        "--phase-file",
+        default="../REAL/phase_allday.txt",
+        help=(
+            "REAL phase file. Supports phase_allday.txt or a glob such as "
+            "../REAL/*.phase_sel.txt. Use phase_sel files for residual-based errors."
+        ),
+    )
     parser.add_argument("--station-file", default="../Data/station.dat")
     parser.add_argument("--velocity-file", default="../REAL/tt_db/mymodel.nd")
     parser.add_argument("--station-output", default="obs/station_coordinates.txt")
@@ -62,11 +72,37 @@ def parse_args() -> argparse.Namespace:
         default=-2.0,
         help="Optional shallow top layer depth in km. Use a large value to disable.",
     )
-    parser.add_argument("--p-error", type=float, default=PHASE_ERRORS["P"])
-    parser.add_argument("--s-error", type=float, default=PHASE_ERRORS["S"])
+    parser.add_argument(
+        "--p-error",
+        type=float,
+        default=PHASE_ERRORS["P"],
+        help="P uncertainty in fixed mode, or minimum P uncertainty floor in residual/auto mode.",
+    )
+    parser.add_argument(
+        "--s-error",
+        type=float,
+        default=PHASE_ERRORS["S"],
+        help="S uncertainty in fixed mode, or minimum S uncertainty floor in residual/auto mode.",
+    )
+    parser.add_argument(
+        "--error-mode",
+        choices=("fixed", "residual", "auto"),
+        default="fixed",
+        help=(
+            "Pick uncertainty policy: fixed uses --p-error/--s-error for every pick; "
+            "residual uses bounded abs(REAL phase_sel residual); auto uses residuals "
+            "when present and fixed values otherwise."
+        ),
+    )
+    parser.add_argument(
+        "--sigma-cap",
+        type=float,
+        default=DEFAULT_SIGMA_CAP,
+        help="Maximum pick uncertainty in seconds when --error-mode uses residuals.",
+    )
     parser.add_argument(
         "--vggrid",
-        default="2 101 65 0.0 0.0 -2.0 1.0 1.0 1.0 SLOW_LEN",
+        default="2 151 65 0.0 0.0 -2.0 1.0 1.0 1.0 SLOW_LEN",
         help="VGGRID arguments after the keyword.",
     )
     parser.add_argument(
@@ -198,6 +234,13 @@ def parse_event_header(line: str) -> tuple[Event, str]:
     return Event(event_id=parts[0], origin=origin), "raw"
 
 
+def float_or_none(value: str) -> float | None:
+    try:
+        return float(value)
+    except ValueError:
+        return None
+
+
 def append_pick(event: Event, line: str, event_format: str) -> None:
     parts = line.split()
     if not parts:
@@ -213,6 +256,7 @@ def append_pick(event: Event, line: str, event_format: str) -> None:
         arrival = datetime(event.origin.year, event.origin.month, event.origin.day) + timedelta(
             seconds=float(parts[3])
         )
+        residual = float_or_none(parts[6]) if len(parts) > 6 else None
         probability = parts[7] if len(parts) > 7 else "1.000"
     else:
         # Normalized REAL/phase_allday.txt pick line:
@@ -223,8 +267,17 @@ def append_pick(event: Event, line: str, event_format: str) -> None:
         phase = parts[3]
         arrival = event.origin + timedelta(seconds=float(parts[1]))
         probability = parts[2]
+        residual = None
 
-    event.picks.append(Pick(station=station, phase=phase, arrival=arrival, probability=probability))
+    event.picks.append(
+        Pick(
+            station=station,
+            phase=phase,
+            arrival=arrival,
+            probability=probability,
+            residual=residual,
+        )
+    )
 
 
 def parse_phase_file(phase_file: Path) -> list[Event]:
@@ -252,6 +305,29 @@ def parse_phase_file(phase_file: Path) -> list[Event]:
     return [event for event in events if event.picks]
 
 
+def expand_phase_files(phase_file: str) -> list[Path]:
+    if glob.has_magic(phase_file):
+        phase_files = [Path(path) for path in sorted(glob.glob(phase_file))]
+    else:
+        phase_files = [Path(phase_file)]
+
+    if not phase_files:
+        raise FileNotFoundError(phase_file)
+
+    missing = [str(path) for path in phase_files if not path.exists()]
+    if missing:
+        raise FileNotFoundError(", ".join(missing))
+
+    return phase_files
+
+
+def parse_phase_files(phase_files: list[Path]) -> list[Event]:
+    events: list[Event] = []
+    for phase_file in phase_files:
+        events.extend(parse_phase_file(phase_file))
+    return events
+
+
 def nlloc_time_fields(arrival: datetime) -> tuple[str, str, str]:
     date_text = arrival.strftime("%Y%m%d")
     hour_minute = arrival.strftime("%H%M")
@@ -259,10 +335,64 @@ def nlloc_time_fields(arrival: datetime) -> tuple[str, str, str]:
     return date_text, hour_minute, f"{sec:07.4f}"
 
 
-def format_pick(pick: Pick, station_map: dict[str, str], p_error: float, s_error: float) -> str:
+def pick_uncertainty(
+    pick: Pick,
+    p_error: float,
+    s_error: float,
+    error_mode: str,
+    sigma_cap: float,
+) -> float:
+    floor = p_error if pick.phase == "P" else s_error
+    if error_mode == "fixed":
+        return floor
+    if pick.residual is None:
+        if error_mode == "auto":
+            return floor
+        raise ValueError(
+            "--error-mode residual requires REAL phase_sel input with residual values; "
+            f"pick {pick.station} {pick.phase} has no residual"
+        )
+    if not math.isfinite(pick.residual):
+        return floor
+    return min(max(abs(pick.residual), floor), sigma_cap)
+
+
+def validate_error_options(
+    events: list[Event],
+    error_mode: str,
+    p_error: float,
+    s_error: float,
+    sigma_cap: float,
+) -> None:
+    if p_error <= 0.0 or s_error <= 0.0:
+        raise ValueError("--p-error and --s-error must be positive")
+    if sigma_cap <= 0.0:
+        raise ValueError("--sigma-cap must be positive")
+    if error_mode in {"residual", "auto"} and sigma_cap < max(p_error, s_error):
+        raise ValueError("--sigma-cap must be greater than or equal to --p-error and --s-error")
+
+    pick_count = sum(len(event.picks) for event in events)
+    residual_count = sum(
+        1 for event in events for pick in event.picks if pick.residual is not None
+    )
+    if error_mode == "residual" and residual_count < pick_count:
+        raise ValueError(
+            "--error-mode residual requires REAL phase_sel input. "
+            f"Only {residual_count} of {pick_count} picks have residual values."
+        )
+
+
+def format_pick(
+    pick: Pick,
+    station_map: dict[str, str],
+    p_error: float,
+    s_error: float,
+    error_mode: str,
+    sigma_cap: float,
+) -> str:
     label = station_map.get(pick.station, station_label(pick.station, "auto"))
     date_text, hour_minute, second_text = nlloc_time_fields(pick.arrival)
-    error = p_error if pick.phase == "P" else s_error
+    error = pick_uncertainty(pick, p_error, s_error, error_mode, sigma_cap)
     return (
         f"{label:<8s} ?    ?    ? {pick.phase:<1s}      ? "
         f"{date_text} {hour_minute}   {second_text} GAU  {error:.2e} "
@@ -277,6 +407,8 @@ def write_phase_files(
     station_map: dict[str, str],
     p_error: float,
     s_error: float,
+    error_mode: str,
+    sigma_cap: float,
 ) -> None:
     ensure_parent(phase_output)
     split_dir.mkdir(parents=True, exist_ok=True)
@@ -286,7 +418,8 @@ def write_phase_files(
     with phase_output.open("w") as combined:
         for index, event in enumerate(events, start=1):
             block = "".join(
-                format_pick(pick, station_map, p_error, s_error) for pick in event.picks
+                format_pick(pick, station_map, p_error, s_error, error_mode, sigma_cap)
+                for pick in event.picks
             )
             if index > 1:
                 combined.write("\n")
@@ -421,12 +554,10 @@ LOCPHASEID S S Sg Sn
 
 def main() -> None:
     args = parse_args()
-    phase_file = Path(args.phase_file)
+    phase_files = expand_phase_files(args.phase_file)
     station_file = Path(args.station_file)
     velocity_file = Path(args.velocity_file)
 
-    if not phase_file.exists():
-        raise FileNotFoundError(phase_file)
     if not station_file.exists():
         raise FileNotFoundError(station_file)
     if not velocity_file.exists():
@@ -441,7 +572,14 @@ def main() -> None:
     trans_lat = args.trans_lat if args.trans_lat is not None else auto_lat
     trans_lon = args.trans_lon if args.trans_lon is not None else auto_lon
 
-    events = parse_phase_file(phase_file)
+    events = parse_phase_files(phase_files)
+    validate_error_options(
+        events,
+        args.error_mode,
+        args.p_error,
+        args.s_error,
+        args.sigma_cap,
+    )
     write_phase_files(
         events,
         Path(args.phase_output),
@@ -449,6 +587,8 @@ def main() -> None:
         station_map,
         args.p_error,
         args.s_error,
+        args.error_mode,
+        args.sigma_cap,
     )
     layer_count = write_velocity_file(
         velocity_file, Path(args.velocity_output), args.datum_shift, args.top_depth
@@ -470,8 +610,16 @@ def main() -> None:
             shutil.rmtree(stale)
 
     pick_count = sum(len(event.picks) for event in events)
+    residual_count = sum(
+        1 for event in events for pick in event.picks if pick.residual is not None
+    )
     print(f"stations: {len(station_map)} -> {args.station_output}")
+    print(f"phase files: {len(phase_files)}")
     print(f"events: {len(events)}, picks: {pick_count} -> {args.phase_output}")
+    print(
+        f"pick uncertainty mode: {args.error_mode} "
+        f"(residual picks: {residual_count}/{pick_count}, sigma cap: {args.sigma_cap:.3f} s)"
+    )
     print(f"split event files -> {args.split_dir}")
     print(f"velocity layers: {layer_count} -> {args.velocity_output}")
     print(f"control file -> {args.control_output}")

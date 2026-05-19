@@ -5,16 +5,17 @@
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_dir="$(cd "$script_dir/.." && pwd)"
 
-for nll_bin_dir in "$repo_dir/bin" "$repo_dir/src/NonLinLoc/src/bin" "$repo_dir/src/NonLinLoc/www_beta/bin" "/mnt/6tb/Codes/NonLinLoc/src/bin"
-do
-    if [[ -x "$nll_bin_dir/Vel2Grid" && -x "$nll_bin_dir/Grid2Time" && -x "$nll_bin_dir/NLLoc" && -x "$nll_bin_dir/Loc2ssst" ]]
-    then
-        export PATH="$nll_bin_dir:$PATH"
-        break
-    fi
-done
+# src/run_install.sh stages REAL and NonLinLoc binaries into the repository bin directory.
+nll_bin_dir=${NLL_BIN_DIR:-"$repo_dir/bin"}
+if [[ -d "$nll_bin_dir" ]]
+then
+    export PATH="$nll_bin_dir:$PATH"
+else
+    echo "NonLinLoc binary directory not found: $nll_bin_dir"
+    echo "Stage binaries with: cd \"$repo_dir/src\" && bash run_install.sh"
+fi
 
-phasein=${phasein:-"../REAL/phase_allday.txt"}
+phasein=${phasein:-"../REAL/*.phase_sel.txt"}
 stationin=${stationin:-"../Data/station.dat"}
 velocityin=${velocityin:-"../REAL/tt_db/mymodel.nd"}
 
@@ -30,7 +31,7 @@ lonref=${lonref:-"auto"}
 datum_shift=${datum_shift:-0.0}
 top_depth=${top_depth:--2.0}
 
-vggrid=${vggrid:-"2 101 65 0.0 0.0 -2.0 1.0 1.0 1.0 SLOW_LEN"}
+vggrid=${vggrid:-"2 151 65 0.0 0.0 -2.0 1.0 1.0 1.0 SLOW_LEN"}
 locgrid=${locgrid:-"101 101 33 -50.0 -50.0 -2.0 1.0 1.0 1.0 PROB_DENSITY SAVE"}
 ssst_grid=${ssst_grid:-"101 101 33 -50.0 -50.0 -2.0 1.0 1.0 1.0 SSST_TIMECORR FLOAT"}
 ssst_out_grid=${ssst_out_grid:-"101 101 33 -50.0 -50.0 -2.0 1.0 1.0 1.0 TIME FLOAT"}
@@ -38,8 +39,10 @@ locsearch=${locsearch:-"OCT 40 40 8 0.01 50000 5000 0 1"}
 locmeth=${locmeth:-"EDT_OT_WT 9999.0 4 -1 -1 -1.0 -1 -1 1"}
 vpvs=${vpvs:--1.0}
 
+error_mode=${error_mode:-"residual"}
 p_error=${p_error:-0.02}
 s_error=${s_error:-0.04}
+sigma_cap=${sigma_cap:-0.50}
 ssst_phstat=${ssst_phstat:-"0.35 12 135.0 1.0 1.0 5.0"}
 
 run_grid=${run_grid:-1}
@@ -52,6 +55,11 @@ char_dist_divisor=${char_dist_divisor:-2}
 char_dist_min=${char_dist_min:-1}
 char_dist_scale=${char_dist_scale:-1}
 min_num_phases_loc=${min_num_phases_loc:-4}
+
+if ((num_cores < 1))
+then
+    num_cores=1
+fi
 
 coord_args=()
 if [[ "$latref" != "auto" ]]; then
@@ -71,8 +79,10 @@ python3 prepare_nonlinloc.py \
     --station-prefix "$station_prefix" \
     --datum-shift "$datum_shift" \
     --top-depth "$top_depth" \
+    --error-mode "$error_mode" \
     --p-error "$p_error" \
     --s-error "$s_error" \
+    --sigma-cap "$sigma_cap" \
     --vggrid "$vggrid" \
     --locgrid "$locgrid" \
     --ssst-grid "$ssst_grid" \
@@ -147,6 +157,7 @@ do
     done
 
     PIDS=()
+    HYP_FILES=()
     for ((i = 0; i < num_cores; i++))
     do
         compgen -G "tmp/obsfiles_${i}/*.nlloc_obs" >/dev/null || continue
@@ -162,6 +173,7 @@ END
         mkdir -p "${out_root}_${i}"
         NLLoc "$control_tmp" &
         PIDS+=($!)
+        HYP_FILES+=("${out_root}_${i}/${project_name}.sum.grid0.loc.hyp")
     done
 
     for pid in "${PIDS[@]}"
@@ -169,12 +181,36 @@ END
         wait "$pid" || exit 1
     done
 
-    cp -a "${out_root}"_*/. "$out_root"/
-    cat "${out_root}"_*/${project_name}.sum.grid0.loc.hyp > "${out_root}/${project_name}.sum.grid0.loc.hyp"
+    missing_hyp=()
+    for hyp_file in "${HYP_FILES[@]}"
+    do
+        if [[ ! -s "$hyp_file" ]]
+        then
+            missing_hyp+=("$hyp_file")
+        fi
+    done
+
+    if [[ ${#missing_hyp[@]} -gt 0 ]]
+    then
+        echo "Missing or empty NLLoc summary file(s):"
+        printf '  %s\n' "${missing_hyp[@]}"
+        exit 1
+    fi
+
+    for hyp_file in "${HYP_FILES[@]}"
+    do
+        cp -a "$(dirname "$hyp_file")"/. "$out_root"/
+    done
+    cat "${HYP_FILES[@]}" > "${out_root}/${project_name}.sum.grid0.loc.hyp"
     for suffix in stations stat stat_totcorr
     do
-        files=( "${out_root}"_*/${project_name}.sum.grid0.loc.${suffix} )
-        if [[ ${#files[@]} -gt 0 && -e "${files[0]}" ]]
+        files=()
+        for hyp_file in "${HYP_FILES[@]}"
+        do
+            candidate="$(dirname "$hyp_file")/${project_name}.sum.grid0.loc.${suffix}"
+            [[ -s "$candidate" ]] && files+=("$candidate")
+        done
+        if [[ ${#files[@]} -gt 0 ]]
         then
             cat "${files[@]}" > "${out_root}/${project_name}.sum.grid0.loc.${suffix}"
         fi

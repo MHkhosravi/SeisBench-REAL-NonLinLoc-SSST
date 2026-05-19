@@ -16,19 +16,19 @@ chomp($seisbench_model);
 
 #how to evaluate your parameters:
 #1. check P and S t_dist curve (if too narrow, increase nrt; vice versa)
-#2. make sure you lose very few events after the second selection (if lose too many, 
+#2. make sure you lose very few events after the second selection (if lose too many,
 #   increase thresholds, e.g.,increase np0, ns0, nps0 and/or npsboth0)
-#3. go to event_verify and check those worst events (least number of picks, 
+#3. go to event_verify and check those worst events (least number of picks,
 #   large station gap and traveltime residual) and make sure they are ture events,
 #   otherwise, increase your thresholds.
 #4. unstable events can be checked in event_verify using their event IDs.
 #   if they are false events, increase your thresholds.
 
 #tips:
-#1. decrease drt (< 1.0, 0 is the best) will improve the stability but will cost more time, 
-#   0 means no nearby initiating picks will be removed. It is time afforable 
+#1. decrease drt (< 1.0, 0 is the best) will improve the stability but will cost more time,
+#   0 means no nearby initiating picks will be removed. It is time afforable
 #   (a couple of minutes) if your total number of grids is only about 1000 (i.e.,10x10x10).
-#2. nrt and grid size (tdx and tdh) trade off, when you use small grid size, choose a large 
+#2. nrt and grid size (tdx and tdh) trade off, when you use small grid size, choose a large
 #   nrt (but may < 2.0). When you use large grid size, please use a small nrt and decrease the drt.
 #3. nxd and rsel can be used to remove those suspicious events and picks, respectively.
 #4. you may get less events when you use loose thresholds compared to strict ones when the drt > 0.
@@ -56,8 +56,8 @@ for($i=0; $i<$nday; $i++){
 	($year,$month,$day) = &Timeadd($year0,$month0,$day0,1);}
 	$year0 = $year; $month0 = $month; $day0 = $day;
 	print"$year $month $day\n";
-	if(length($month)==1){$month = "0".$month;} 
-	if(length($day)==1){$day = "0".$day;} 
+	if(length($month)==1){$month = "0".$month;}
+	if(length($day)==1){$day = "0".$day;}
 	$outfile ="$year$month$day";
 
     # -D(nyear/nmon/nday/lat_center)
@@ -72,7 +72,7 @@ for($i=0; $i<$nday; $i++){
     # -S(np0/ns0/nps0/npsboth0/std0/dtps/nrt/[drt/nxd/rsel/ires])
     #$S = "3/2/8/2/0.5/0.1/1.8/0.35"; # for small grid size
     $S = "3/2/8/2/0.5/0.1/1.2/0.0"; # for large grid size
-    
+
     $dir = "../Pick/SeisBench/picks/$seisbench_model/$year$month$day";
     $station = "../Data/station.dat";
     $ttime = "./tt_db/ttdb.txt";
@@ -96,7 +96,7 @@ for($i=0; $i<$nday; $i++){
             ($jk,$year,$month,$day,$hour,$min,$sec,$evla,$evlo,$evdp,$evmg,$EH,$EZ,$RMS,$nn) = split(" ",$_);chomp($nn);
             $nn=$nn+$ID;
             printf OUT "%1s %04d %02d %02d %02d %02d %06.3f  %8.4f  %9.4f  %6.3f %5.2f %7.2f %7.2f %7.2f      %06d\n",$jk,$year,$month,$day,$hour,$min,$sec,$evla,$evlo,$evdp,$evmg,$EH,$EZ,$RMS,$nn;
-            }else{print OUT "$_\n";}	
+            }else{print OUT "$_\n";}
     }
     $ID=$nn;
 }
@@ -121,10 +121,10 @@ $phasebest = "phase_best_allday.txt";
 
 sub PhaseAll{
     my($file) = @_;
-	open(JK,"<$file");  
+	open(JK,"<$file");
 	@par = <JK>;
 	close(JK);
-    
+
     $num = 0;
     open(OT,">$file");
 	foreach $file(@par){
@@ -145,10 +145,10 @@ sub PhaseAll{
 
 sub PhaseBest{
     my($filein,$fileout,$numps,$gap0) = @_;
-	open(JK,"<$filein");  
+	open(JK,"<$filein");
 	@par = <JK>;
 	close(JK);
-    
+
     $num = 0;
     open(OT,">$fileout");
 	foreach $file(@par){
@@ -175,7 +175,7 @@ sub PhaseBest{
 
 sub Timeadd{
    my($yyear,$mm,$dday,$adday) = @_;
-   $dday = $dday + $adday;	
+   $dday = $dday + $adday;
    if (($mm==1) || ($mm==3) || ($mm==5) || ($mm==7) || ($mm==8) || ($mm==10) || ($mm==12)){
       if ($dday >31) {
          $dday = 1;
@@ -185,7 +185,7 @@ sub Timeadd{
             $yyear = $yyear + 1;
          }
       }
-   }    
+   }
    if (($mm==4) || ($mm==6) || ($mm==9) || ($mm==11)){
       if ($dday >30) {
          $dday = 1;
@@ -195,7 +195,7 @@ sub Timeadd{
             $yyear = $yyear + 1;
          }
       }
-   }    
+   }
    if ($mm == 2) {
       if ((($yyear%4 == 0) && ($yyear%100 != 0)) || ($yyear%400 == 0)){
          if ($dday >29) {

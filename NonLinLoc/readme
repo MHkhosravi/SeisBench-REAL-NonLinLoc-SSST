@@ -1,8 +1,9 @@
 NonLinLoc location module
 
-This module is intended to run after REAL association. It reads:
+This module is intended to run after REAL association. By default the run
+scripts read:
 
-../REAL/phase_allday.txt
+../REAL/*.phase_sel.txt
 ../Data/station.dat
 ../REAL/tt_db/mymodel.nd
 
@@ -23,14 +24,17 @@ For iterative SSST relocation:
 
 bash run_ssst_relocations.sh
 
-On Linux, run_nonlinloc.sh uses the locally built binaries in:
+The run scripts use binaries staged in the repository bin directory:
 
-../src/NonLinLoc/src/bin
+../bin
 
-If they are missing, build the needed programs from the repository root with:
+If they are missing, build the needed programs from the repository root and
+stage them with:
 
 cmake -S src/NonLinLoc/src -B src/NonLinLoc/src/build
 cmake --build src/NonLinLoc/src/build --target Vel2Grid Grid2Time NLLoc Loc2ssst LocSum -j
+cd src
+bash run_install.sh
 
 Grid2Time is run once for P and once for S because GTFILES selects one phase
 per run. The default grids use cubic 1 km cells because the Podvin-Lecomte
@@ -38,6 +42,6 @@ travel-time solver requires dx=dy=dz. The default -2 km grid top keeps the
 current station elevations inside the model.
 
 Before final locations, edit run_nonlinloc.sh for the study-specific grid,
-reference point, datum shift, pick errors, and minimum phase count.
+reference point, datum shift, pick-error mode, and minimum phase count.
 For SSST runs, edit run_ssst_relocations.sh for the same grid/datum settings
 and the iteration count.
