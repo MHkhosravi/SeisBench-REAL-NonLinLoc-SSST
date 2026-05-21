@@ -9,6 +9,6 @@ rm -f REAL/*.catalog_sel.txt REAL/*.phase_sel.txt REAL/*.hypolocSA.dat REAL/*.hy
 rm -f REAL/catalog_allday.txt REAL/catalogSA_allday.txt REAL/phase_allday.txt REAL/phaseSA_allday.txt
 rm -f REAL/phase_best_allday.txt
 
-rm -rf NonLinLoc/obs NonLinLoc/obs_files NonLinLoc/run NonLinLoc/time NonLinLoc/loc
-rm -rf NonLinLoc/tmp NonLinLoc/ssst
-rm -f NonLinLoc/nlloc.in NonLinLoc/loc2ssst.in
+rm -rf NonLinLoc/obs NonLinLoc/obs_files NonLinLoc/run NonLinLoc/model NonLinLoc/time NonLinLoc/loc
+rm -rf NonLinLoc/out NonLinLoc/tmp NonLinLoc/ssst
+rm -f NonLinLoc/nlloc.in NonLinLoc/loc2ssst.in NonLinLoc/ssst.list NonLinLoc/Grid2GMT_SSST.cpt
