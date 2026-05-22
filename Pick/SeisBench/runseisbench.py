@@ -16,6 +16,10 @@ Each REAL pick line is:
 
 from __future__ import annotations
 
+import numpy as np  # noqa: E402 – must precede obspy/seisbench to patch np.float_
+if not hasattr(np, "float_"):
+    np.float_ = np.float64  # type: ignore[attr-defined]
+
 import argparse
 import csv
 import glob
